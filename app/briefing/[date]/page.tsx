@@ -106,11 +106,13 @@ export default function BriefingDatePage() {
         />
 
         <BriefingHeader
-          date={date}
+          startDate={date}
+          endDate={date}
           articleCount={articles.length}
           fullBriefingMarkdown={fullMarkdown}
           onSendEmail={handleSendEmail}
           onRefresh={fetchBriefing}
+          onDateRangeChange={() => {}}
           isLoading={isLoading}
           isSendingEmail={isSendingEmail}
         />
