@@ -1,0 +1,7 @@
+{
+  "crons": [
+    { "path": "/api/cron/collect", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/summarize", "schedule": "5 5 * * *" },
+    { "path": "/api/cron/email", "schedule": "10 5 * * *" }
+  ]
+}
