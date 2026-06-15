@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+
+export const maxDuration = 60; // Vercel Hobby 최대 허용 60초
 import { collectAllNews, extractSource } from '@/lib/naver';
 import { createServerClient } from '@/lib/supabase';
 import { getTodayKST } from '@/lib/date';

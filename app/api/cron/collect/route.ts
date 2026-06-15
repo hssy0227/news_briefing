@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+
+export const maxDuration = 60;
 import { collectAllNews, extractSource } from '@/lib/naver';
 import { createServerClient } from '@/lib/supabase';
 import { getTodayKST } from '@/lib/date';
@@ -23,11 +25,10 @@ export async function GET(request: Request) {
 
     const { articles, stats } = await collectAllNews();
 
-    // 기존 URL 조회
+    // 기존 URL 조회 (날짜 무관 - url UNIQUE 제약 대응)
     const { data: existingArticles } = await supabase
       .from('articles')
-      .select('url')
-      .eq('briefing_date', date);
+      .select('url');
 
     const existingUrls = new Set(
       (existingArticles || []).map((a: { url: string }) => a.url)
