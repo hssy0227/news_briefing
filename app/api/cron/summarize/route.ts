@@ -4,10 +4,13 @@ import { generateSummaries } from '@/lib/claude';
 import { getTodayKST } from '@/lib/date';
 import type { Article } from '@/types/news';
 
+export const maxDuration = 60;
+
 /**
- * 크론: AI 요약 생성 (매일 14:05 KST)
+ * 크론: AI 요약 생성 (매일 14:07 KST)
  * GET /api/cron/summarize
- * Vercel Cron에 의해 자동 호출된다.
+ * 큐레이션 통과 기사 중 점수 높은 순 30건만 요약한다.
+ * 본문 스크래핑 없이 제목만으로 처리한다 (속도 최적화).
  */
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -19,24 +22,26 @@ export async function GET(request: Request) {
     const date = getTodayKST();
     const supabase = createServerClient();
 
-    // 요약 없는 기사 조회
+    // 요약 없는 기사 중 점수 높은 순 30건
     const { data: articles } = await supabase
       .from('articles')
       .select('*')
       .eq('briefing_date', date)
       .eq('is_excluded', false)
-      .is('summary_point1', null)
-      .order('category')
-      .order('created_at');
+      .or('summary_point1.is.null,summary_point1.eq.요약 생성 실패')
+      .order('curation_score', { ascending: false, nullsFirst: false })
+      .limit(30);
 
     if (!articles || articles.length === 0) {
       return NextResponse.json({
         success: true,
-        data: { date, summarized: 0 },
+        data: { date, summarized: 0, message: '요약할 기사가 없습니다.' },
       });
     }
 
-    const summaries = await generateSummaries(articles as Article[]);
+    // 본문 없이 요약 (크론에서는 속도 우선)
+    const emptyBodies = new Map<string, string>();
+    const summaries = await generateSummaries(articles as Article[], emptyBodies);
 
     let updatedCount = 0;
     for (const summary of summaries) {

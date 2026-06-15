@@ -66,8 +66,13 @@ export default function HomePage() {
     setEndDate(newEnd);
   }
 
+  /** 로컬 개발 환경 여부 */
+  const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+
   /**
-   * 수동 뉴스 수집 → 큐레이션(전체) → 요약(통과분) 순서로 실행한다.
+   * 새로고침 핸들러.
+   * 로컬: 수집 → 큐레이션 → 요약 전체 실행
+   * Vercel: 수집만 실행 (큐레이션·요약은 매일 14:00 크론이 처리)
    */
   async function handleRefresh() {
     setIsLoading(true);
@@ -82,36 +87,39 @@ export default function HomePage() {
 
       if (collectResult.success) {
         setToast({
-          message: `${collectResult.data.inserted}건의 새 뉴스를 수집했습니다. 큐레이션 중...`,
+          message: `${collectResult.data.inserted}건 수집 완료.${isLocal ? ' 큐레이션 중...' : ' 큐레이션/요약은 14:00 자동 실행됩니다.'}`,
           type: 'info',
         });
       }
 
-      // 2. 전체 기사 큐레이션 (기존 포함 재판정)
-      const curateRes = await fetch('/api/curate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: endDate }),
-      });
-      const curateResult = await curateRes.json();
-
-      if (curateResult.success) {
-        setToast({
-          message: `큐레이션 완료: ${curateResult.data.passed}건 통과. 요약 생성 중...`,
-          type: 'info',
+      if (isLocal) {
+        // 2. 전체 기사 큐레이션
+        const curateRes = await fetch('/api/curate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: endDate }),
         });
+        const curateResult = await curateRes.json();
+
+        if (curateResult.success) {
+          setToast({
+            message: `큐레이션 완료: ${curateResult.data.passed}건 통과. 요약 생성 중...`,
+            type: 'info',
+          });
+        }
+
+        // 3. 통과 기사 요약
+        await fetch('/api/summarize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: endDate }),
+        });
+
+        setToast({ message: '브리핑이 업데이트됐습니다.', type: 'success' });
       }
 
-      // 3. 통과 기사 요약
-      await fetch('/api/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: endDate }),
-      });
-
-      // 4. 브리핑 다시 로드
+      // 브리핑 다시 로드
       await fetchBriefing();
-      setToast({ message: '브리핑이 업데이트됐습니다.', type: 'success' });
     } catch (error) {
       console.error('새로고침 실패:', error);
       setToast({ message: '새로고침에 실패했습니다.', type: 'error' });
