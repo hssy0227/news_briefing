@@ -20,11 +20,10 @@ export async function POST(request: Request) {
     // 네이버 뉴스 수집
     const { articles, stats } = await collectAllNews();
 
-    // 이미 DB에 저장된 URL 목록 조회
+    // 이미 DB에 저장된 URL 목록 조회 (날짜 무관 - url UNIQUE 제약 대응)
     const { data: existingArticles } = await supabase
       .from('articles')
-      .select('url')
-      .eq('briefing_date', date);
+      .select('url');
 
     const existingUrls = new Set(
       (existingArticles || []).map((a: { url: string }) => a.url)
