@@ -25,10 +25,11 @@ export async function GET(request: Request) {
 
     const { articles, stats } = await collectAllNews();
 
-    // 기존 URL 조회 (날짜 무관 - url UNIQUE 제약 대응)
+    // 오늘 날짜에 이미 저장된 URL 목록 조회
     const { data: existingArticles } = await supabase
       .from('articles')
-      .select('url');
+      .select('url')
+      .eq('briefing_date', date);
 
     const existingUrls = new Set(
       (existingArticles || []).map((a: { url: string }) => a.url)
